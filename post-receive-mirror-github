@@ -100,11 +100,15 @@ class GitHub:
         return name
 
 def get_repo_name ():
-    repo_name = os.getcwd ().split("/")[-1]
-    if repo_name == ".git":
-        repo_name = os.getcwd ().split("/")[-2]
-    elif repo_name.endswith(".git"):
+    repo_name = "".join(os.getcwd ().split("/git/")[1:]).replace('/','-')
+    if repo_name.endswith(".git"):
         repo_name = repo_name[0:-4]
+
+    parts = repo_name.split("-")
+    while len(parts) >= 2 and parts[0] == parts[1]:
+        parts.remove(parts[0])
+    repo_name = "-".join(parts)
+
     return repo_name
 
 def main ():
