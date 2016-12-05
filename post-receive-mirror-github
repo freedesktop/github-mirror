@@ -109,6 +109,8 @@ def get_repo_name ():
 
     if repo_namespace and repo_parts[1].startswith(repo_namespace + '-'):
         repo_parts[1] = repo_parts[1].replace(repo_namespace + '-', '', 1)
+    elif repo_namespace and repo_parts[1] == repo_namespace + ".git":
+        repo_parts.remove(repo_parts[1])
     elif repo_namespace and repo_parts[1] == repo_namespace:
         repo_parts.remove(repo_parts[1])
 
