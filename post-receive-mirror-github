@@ -126,9 +126,14 @@ def main ():
     if not gh.check_if_repo_exists(repo_name):
         gh.create_github_repo (repo_name)
     try:
-        command = 'git push --force --no-verify --mirror git@github.com:%s/%s' % (ORGANIZATION, github_name)
         out = tempfile.NamedTemporaryFile (prefix="github",suffix="std")
         err = tempfile.NamedTemporaryFile (prefix="github",suffix="err")
+        command = 'git config --local push.default matching'
+        command = 'git push --force --no-verify --prune git@github.com:%s/%s refs/heads/*:refs/heads/*' % (ORGANIZATION, github_name)
+        subprocess.check_call(shlex.split(command), stderr=err, stdout=out)
+        command = 'git push --force --no-verify --prune git@github.com:%s/%s refs/tags/*:refs/tags/*' % (ORGANIZATION, github_name)
+        subprocess.check_call(shlex.split(command), stderr=err, stdout=out)
+        command = 'git push --force --no-verify --prune git@github.com:%s/%s refs/notes/*:refs/notes/*' % (ORGANIZATION, github_name)
         subprocess.check_call(shlex.split(command), stderr=err, stdout=out)
         out.close()
         err.close()
