@@ -12,3 +12,5 @@ echo "$3" > "$1"/description
 touch "$1"/git-daemon-export-ok
 chmod +x "$1"/hooks/update
 
+bin/set-up-post-receive-hooks.sh "$1"
+
