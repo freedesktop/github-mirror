@@ -6,7 +6,7 @@ mkdir -p /run/github-mirror
 
 (
     while read -u 3 repository; do
-       (cd "$repository"; /git/bin/post-receive-mirror-github) &
+       (cd "$repository"; /git/bin/sync-github-mirror) &
     done
 ) &
 
