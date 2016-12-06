@@ -132,7 +132,6 @@ def main ():
     try:
         out = tempfile.NamedTemporaryFile (prefix="github",suffix="std")
         err = tempfile.NamedTemporaryFile (prefix="github",suffix="err")
-        command = 'git config --local push.default matching'
         command = 'git push --force --no-verify --prune git@github.com:%s/%s refs/heads/*:refs/heads/*' % (ORGANIZATION, github_name)
         subprocess.check_call(shlex.split(command), stderr=err, stdout=out)
         command = 'git push --force --no-verify --prune git@github.com:%s/%s refs/tags/*:refs/tags/*' % (ORGANIZATION, github_name)
