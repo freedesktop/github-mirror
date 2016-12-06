@@ -51,7 +51,7 @@ class GitHub:
     def __init__ (self):
         config = ConfigParser.ConfigParser()
         try:
-            config.read(os.path.expanduser('/etc/github/mirror.cfg'))
+            config.read(os.path.expanduser('/etc/github-mirror/mirror.cfg'))
             self.user = config.get('Github', 'user')
             self.pw   = config.get('Github', 'password')
         except ConfigParser.NoSectionError:
