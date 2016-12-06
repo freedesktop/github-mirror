@@ -1,0 +1,8 @@
+[Unit]
+Description=mirror /git to github
+After=systemd-user-sessions.service plymouth-quit-wait.service
+After=rc-local.service
+
+[Socket]
+ListenFIFO=/run/github-mirror/named-pipe
+Service=github-mirror.service

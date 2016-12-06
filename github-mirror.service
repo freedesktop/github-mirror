@@ -1,0 +1,9 @@
+[Unit]
+Description=mirror /git to github
+
+[Service]
+User=github-mirror
+Sockets=github-mirror.socket
+ExecStart=/git/bin/github-mirror
+PIDFile=/run/github-mirror/pid
+Type=forking

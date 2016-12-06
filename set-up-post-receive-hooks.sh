@@ -20,7 +20,7 @@ done
 EOF
 
 [ -e hooks/post-receive ] && mv hooks/post-receive hooks/post-receive.d/00-post-receive
-ln -s /git/bin/post-receive-mirror-github hooks/post-receive.d/01-github
+ln -sf /git/bin/signal-github-mirror hooks/post-receive.d/01-github
 
 mv hooks/post-receive-new-$$ hooks/post-receive
 chmod +x hooks/post-receive
