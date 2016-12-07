@@ -116,6 +116,9 @@ def get_repo_name ():
     elif repo_namespace and repo_parts[1] == repo_namespace:
         repo_parts.remove(repo_parts[1])
 
+    if repo_parts[-1] == ".git":
+        repo_parts = repo_parts[:-1]
+
     repo_name = "-".join(repo_parts)
 
     if repo_name.endswith(".git"):
