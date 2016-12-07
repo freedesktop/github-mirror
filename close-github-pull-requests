@@ -1,0 +1,156 @@
+#!/usr/bin/python2
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
+"""
+Copyright (c) 2013 Alberto Ruiz <aruiz@gnome.org>
+All rights reserved.
+
+Hacked up to work for freedesktop.org by Ray Strode <rstrode@redhat.com>
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+  * Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+  * Redistributions in binary form must reproduce the above copyright notice,
+    this list of conditions and the following disclaimer in the documentation
+    and/or other materials provided with the distribution.
+  * Neither the name of Pioneers of the Inevitable, Songbird, nor the names
+    of its contributors may be used to endorse or promote products derived
+    from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+"""
+import codecs
+import os
+import sys
+import requests
+import subprocess
+import shlex
+import ConfigParser
+import xml.etree.ElementTree as et
+import smtplib
+from email.mime.text import MIMEText
+import tempfile
+import json
+
+ORGANIZATION="freedesktop"
+name_maps = {"gtk+":       "gtk",
+             "libxml++":   "libxmlmm"}
+
+class GitHub:
+    def __init__ (self):
+        config = ConfigParser.ConfigParser()
+        try:
+            config.read(os.path.expanduser('/etc/github-mirror/mirror.cfg'))
+            self.user = config.get('Github', 'user')
+            self.pw   = config.get('Github', 'password')
+        except ConfigParser.NoSectionError:
+            raise Exception ("~/.gitmirrorrc non existant or missing [Github] section with user and password keys")
+        except ConfigParser.NoOptionError:
+            raise Exception ("~/.gitmirrorrc misses user or/and password keys in the [Github] section")
+
+    def check_if_repo_exists (self, name):
+        rq = requests.get('https://api.github.com/repos/'+ORGANIZATION+'/'+name,
+                          auth=(self.user, self.pw))
+        if rq.status_code != 200:
+            return False
+
+        return True
+
+    def close_pull_request (self, name, pull_request):
+        payload = json.dumps({
+                             'body': ORGANIZATION+' doesn\'t allow pull requests on its mirrors. This is an automated message.',
+                             })
+        rq = requests.post(pull_request['comments_url'],
+                           auth=(self.user, self.pw),
+                           data=payload)
+        if rq.status_code != 201:
+            raise Exception("There was an error attempting to comment on the repo %s pull request %s in github:\n\nStatus: %d\nText:\n%s" % (name, pull_request['url'], rq.status_code, rq.text))
+
+        payload = json.dumps({
+                             'state': 'closed'
+                             })
+        rq = requests.post(pull_request['url'],
+                           auth=(self.user, self.pw),
+                           data=payload)
+        if rq.status_code != 200:
+            raise Exception("There was an error attempting to the close repo %s pull request %s in github:\n\nStatus: %d\nText:\n%s" % (name, pull_request['url'], rq.status_code, rq.text))
+
+    def close_pull_requests (self, name):
+        response = requests.get('https://api.github.com/repos/'+ORGANIZATION+'/'+name+'/pulls',
+                                auth=(self.user, self.pw))
+
+        if response.status_code != 200:
+            raise Exception("There was an error attempting to close open pull requests for repo %s in github:\n\n Status %d\nText: \n%s" % (name, response.status_code, response.text))
+
+        pull_requests = json.loads(response.content)
+
+        for pull_request in pull_requests:
+            if pull_request['state'] != 'open':
+                continue
+
+            self.close_pull_request (name, pull_request)
+
+    def normalize_name (self, name):
+        if name in name_maps.keys():
+            return name_maps[name]
+
+        if "+" in name:
+            raise Exception("%s has a '+' character in it which is unsupported by Github.\nYou have to add it to the exception maps in the post-update hook." % name)
+
+        return name
+
+def get_repo_name ():
+    repo_namespace = os.getcwd ().split("/")[-2]
+
+    if repo_namespace == "git":
+        repo_namespace = None
+
+    repo_parts = "".join(os.getcwd ().split("/git/")[1:]).split('/')
+
+    if repo_namespace and repo_parts[1].startswith(repo_namespace + '-'):
+        repo_parts[1] = repo_parts[1].replace(repo_namespace + '-', '', 1)
+    elif repo_namespace and repo_parts[1] == repo_namespace + ".git":
+        repo_parts.remove(repo_parts[1])
+    elif repo_namespace and repo_parts[1] == repo_namespace:
+        repo_parts.remove(repo_parts[1])
+
+    if repo_parts[-1] == ".git":
+        repo_parts = repo_parts[:-1]
+
+    repo_name = "-".join(repo_parts)
+
+    if repo_name.endswith(".git"):
+        repo_name = repo_name[0:-4]
+
+    return repo_name
+
+def main ():
+    gh = GitHub ()
+    repo_name = get_repo_name ()
+    github_name = gh.normalize_name (repo_name)
+    if gh.check_if_repo_exists(repo_name):
+        gh.close_pull_requests (repo_name)
+
+if __name__ == "__main__":
+    try:
+        main ()
+    except Exception as e:
+        msg = MIMEText(str(e))
+        msg['Subject'] = "[GITHUB HOOK] ERROR trying to close pull requests for %s" %  os.getcwd ()
+        msg['From']    = "noreply@freedesktop.org"
+        msg['To']      = "halfline+fdo-github-mirror@freedesktop.org"
+        msg['X-FDO-SERVICE'] = "github-mirror"
+        server = smtplib.SMTP("localhost")
+        server.sendmail (msg['From'], msg['To'], msg.as_string())
+        server.quit ()

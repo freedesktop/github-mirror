@@ -1,0 +1,7 @@
+[Unit]
+Description=Close all pull requests from github mirror every hour
+
+[Timer]
+OnBootSec=1h
+OnUnitInactiveSec=1h
+Unit=close-github-pull-requests.service

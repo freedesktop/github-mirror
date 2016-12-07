@@ -1,0 +1,7 @@
+[Unit]
+Description=close github mirror pull requests
+
+[Service]
+User=github-mirror
+ExecStart=/git/bin/close-all-github-pull-requests.sh
+Type=oneshot
