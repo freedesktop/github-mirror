@@ -32,6 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import codecs
 import os
+import os.path
 import sys
 import requests
 import subprocess
@@ -130,7 +131,7 @@ def main ():
     gh = GitHub ()
     repo_name = get_repo_name ()
     github_name = gh.normalize_name (repo_name)
-    if not gh.check_if_repo_exists(repo_name):
+    if not gh.check_if_repo_exists(repo_name) and os.path.exists("git-daemon-export-ok"):
         gh.create_github_repo (repo_name)
     try:
         out = tempfile.NamedTemporaryFile (prefix="github",suffix="std")
